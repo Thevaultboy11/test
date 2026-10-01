@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Face Recognition Test</title>
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f6f6f4; --card:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#6b6b70; --line:#dcdcd8; --grid:#e8e7e3;
+    --accent:#2f5d8a; --accent-ink:#ffffff; --ok:#2e7d4f; --bad:#b3412f; --hover:rgba(47,93,138,.16);
+    --s1:#2a78d6; --s2:#eb6834; --chip:#eeeeea; --tipbg:#1d1d1f; --tipink:#ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --bg:#121211; --card:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#9b9a93; --line:#34342f; --grid:#2a2a27;
+      --accent:#3987e5; --accent-ink:#ffffff; --ok:#5cc28a; --bad:#e66767; --hover:rgba(57,135,229,.22);
+      --s1:#3987e5; --s2:#d95926; --chip:#2a2a27; --tipbg:#f4f4f2; --tipink:#111;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --bg:#121211; --card:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#9b9a93; --line:#34342f; --grid:#2a2a27;
+    --accent:#3987e5; --accent-ink:#ffffff; --ok:#5cc28a; --bad:#e66767; --hover:rgba(57,135,229,.22);
+    --s1:#3987e5; --s2:#d95926; --chip:#2a2a27; --tipbg:#f4f4f2; --tipink:#111;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  #app{max-width:1150px;margin:0 auto;padding:24px 16px 64px}
+  h1{font-size:28px;margin:8px 0 4px}
+  h2{font-size:21px;margin:24px 0 8px}
+  h3{font-size:16px;margin:18px 0 6px}
+  p{margin:6px 0}
+  code{background:var(--chip);padding:1px 5px;border-radius:4px;font-size:14px}
+  .muted{color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin:16px 0}
+  .center{text-align:center}
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px 18px}
+  button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.big{font-size:19px;padding:14px 28px}
+  .choices{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:20px 0}
+  .choice{min-width:180px;font-size:19px;padding:16px 22px}
+  .choice.sel{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .stim-wrap{position:relative;display:inline-block;max-width:100%;margin:12px auto;background:#fff;border-radius:8px}
+  .stim-wrap img{display:block;max-width:100%;max-height:62vh;border-radius:8px}
+  .hit{position:absolute;top:0;bottom:0;cursor:pointer;border-radius:10px}
+  .hit:hover{background:var(--hover)}
+  .nums{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+  .nums button{min-width:64px;font-size:20px}
+  .ref-img{max-width:min(420px,100%);max-height:55vh;display:block;margin:12px auto;border-radius:8px;background:#fff}
+  .corner{position:fixed;right:12px;bottom:10px;font-size:13px;color:var(--muted);background:none;border:none;padding:4px 6px}
+  table{border-collapse:collapse;width:100%;font-size:14px}
+  th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:middle}
+  th{font-weight:600;white-space:nowrap;color:var(--ink2)}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  select,input[type=text],input[type=number]{font:inherit;font-size:14px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);max-width:100%}
+  .thumb{height:46px;max-width:150px;border-radius:4px;border:1px solid var(--line);background:#fff;display:block}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .warn{color:var(--bad)}
+  .good{color:var(--ok)}
+  .progress{font-size:14px;color:var(--muted)}
+  .table-scroll{overflow-x:auto}
+  .num{width:62px}
+  .path{font-size:13px;word-break:break-all;max-width:260px}
+  tr.skip td{opacity:.45}
+  ul.issues{margin:6px 0;padding-left:20px}
+  .tabs{display:flex;gap:8px;margin:8px 0 0}
+  .tabs button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .tile .v{font-size:30px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.2}
+  .tile .l{font-size:13px;color:var(--ink2)}
+  .tile .s{font-size:12px;color:var(--muted)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink2);margin:4px 0 6px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  svg.chart{width:100%;height:auto;display:block}
+  svg.chart text{fill:var(--ink2);font-size:12px;font-family:inherit}
+  svg.chart .val{fill:var(--ink);font-size:12px;font-weight:600}
+  svg.chart .grid{stroke:var(--grid);stroke-width:1}
+  svg.chart .axis{stroke:var(--line);stroke-width:1}
+  svg.chart .chance{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 4}
+  svg.chart [data-tip]{cursor:default}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px}
+  @media (max-width:520px){ .grid2{grid-template-columns:1fr} }
+  #tip{position:fixed;pointer-events:none;background:var(--tipbg);color:var(--tipink);font-size:13px;padding:6px 9px;border-radius:6px;z-index:10;display:none;max-width:260px;line-height:1.35}
+  .heat td{text-align:center;font-variant-numeric:tabular-nums;border:2px solid var(--card);border-radius:6px}
+  .heat th{text-align:center}
+  .heat th:first-child{text-align:left}
+  .stat{background:var(--chip);border-radius:8px;padding:10px 12px;font-size:14px;margin-top:10px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="tip"></div>
+<script>
+/* ============================================================
+   Face Recognition Test: own-group vs other-group
+
+   Nothing about the experiments is built in. Everything comes from
+   the image folder the experimenter loads:
+     - friend's name, group, reference photo vs picture number,
+       correct position (optional, e.g. "_c2"), faces (optional, "_4faces")
+   Faces per picture are detected from the image itself (white gaps
+   between the face ovals), so pictures can have 3 in one and 4 in another.
+   Results are saved in this browser's local storage after every answer.
+   ============================================================ */
+
+/* ============================================================
+   BUILT-IN PICTURES (served from the /images folder of the site)
+   ------------------------------------------------------------
+   ANSWER KEY: "correct" = position of the friend, counting from the LEFT (1 = leftmost).
+   null = not known yet: the picture is still shown, but not scored.
+   Change a number here, save, and redeploy.
+   ============================================================ */
+const BUILTIN_FRIENDS = {
+  muhammed: { name:'Muhammed', group:'emirati',    ref:'images/muhammed_ref.jpg' },
+  john:     { name:'John',     group:'caucasian',  ref:'images/john_ref.jpg' },
+  arjun:    { name:'Arjun',    group:'southasian', ref:'images/arjun_ref.jpg' },
+};
+const BUILTIN_PICTURES = [
+  { file:'images/muhammed_1.jpg', friend:'muhammed', picture:1, faces:4, correct:null, segs:[[0.0, 0.2884], [0.2884, 0.5], [0.5, 0.7116], [0.7116, 1.0]] },
+  { file:'images/muhammed_2.jpg', friend:'muhammed', picture:2, faces:4, correct:null, segs:[[0.0, 0.2878], [0.2878, 0.5], [0.5, 0.7116], [0.7116, 1.0]] },
+  { file:'images/muhammed_3.jpg', friend:'muhammed', picture:3, faces:4, correct:2, segs:[[0.0, 0.2884], [0.2884, 0.5], [0.5, 0.7116], [0.7116, 1.0]] },
+  { file:'images/muhammed_4.jpg', friend:'muhammed', picture:4, faces:4, correct:null, segs:[[0.0, 0.2878], [0.2878, 0.5], [0.5, 0.7116], [0.7116, 1.0]] },
+  { file:'images/john_1.jpg', friend:'john', picture:1, faces:4, correct:1, segs:[[0.0, 0.2581], [0.2581, 0.5], [0.5, 0.7413], [0.7413, 1.0]] },
+  { file:'images/john_2.jpg', friend:'john', picture:2, faces:4, correct:4, segs:[[0.0, 0.257], [0.257, 0.5], [0.5, 0.743], [0.743, 1.0]] },
+  { file:'images/john_3.jpg', friend:'john', picture:3, faces:4, correct:1, segs:[[0.0, 0.2826], [0.2826, 0.4994], [0.4994, 0.7297], [0.7297, 1.0]] },
+  { file:'images/john_4.jpg', friend:'john', picture:4, faces:4, correct:null, segs:[[0.0, 0.2814], [0.2814, 0.5], [0.5, 0.7186], [0.7186, 1.0]] },
+  { file:'images/john_5.jpg', friend:'john', picture:5, faces:4, correct:2, segs:[[0.0, 0.2808], [0.2808, 0.4994], [0.4994, 0.7186], [0.7186, 1.0]] },
+  { file:'images/arjun_1.jpg', friend:'arjun', picture:1, faces:3, correct:2, segs:[[0.0, 0.386], [0.386, 0.6128], [0.6128, 1.0]] },
+  { file:'images/arjun_2.jpg', friend:'arjun', picture:2, faces:3, correct:3, segs:[[0.0, 0.382], [0.382, 0.6233], [0.6233, 1.0]] },
+  { file:'images/arjun_3.jpg', friend:'arjun', picture:3, faces:3, correct:1, segs:[[0.0, 0.3913], [0.3913, 0.6105], [0.6105, 1.0]] },
+  { file:'images/arjun_4.jpg', friend:'arjun', picture:4, faces:3, correct:2, segs:[[0.0, 0.3808], [0.3808, 0.6186], [0.6186, 1.0]] },
+  { file:'images/arjun_5.jpg', friend:'arjun', picture:5, faces:3, correct:3, segs:[[0.0, 0.3802], [0.3802, 0.6192], [0.6192, 1.0]] },
+];
+
+const GROUPS = [
+  { id:'caucasian',  label:'Caucasian' },
+  { id:'emirati',    label:'Emirati' },
+  { id:'southasian', label:'South Asian' },
+];
+const GROUP_BY_ID = Object.fromEntries(GROUPS.map(g => [g.id, g]));
+const groupLabel = id => GROUP_BY_ID[id] ? GROUP_BY_ID[id].label : 'Unassigned';
+
+const GROUP_WORDS = [
+  [/^(caucasian|caucasion|caucasians|european|white)$/, 'caucasian'],
+  [/^(emirati|emiratis|arab|arabic|uae)$/, 'emirati'],
+  [/^(southasian|south|asian|indian|india|desi)$/, 'southasian'],
+];
+const STOP = new Set(('ref reference base alone original target friend main solo single pic pics picture pictures img image images photo photos trial test quiz q nr no num number ' +
+  'correct answer ans pos position c faces face people persons ppl f copy final new v version gemini generated chatgpt dalle midjourney mj flux sd png jpg jpeg webp ' +
+  'caucasian caucasion caucasians european white emirati emiratis arab arabic uae southasian south asian indian india desi set exp experiment group the of and').split(' '));
+
+/* Optional: paste a Google Apps Script web-app URL here to collect every answer
+   from every participant's device in one Google Sheet (see README.md). Empty = off. */
+const RESULTS_URL = '';
+
+const LS_CFG = 'faceExp.config.v4';
+const LS_DATA = 'faceExp.responses.v1';
+const LS_COUNT = 'faceExp.counter.v1';
+
+/* ---------- storage ---------- */
+function lsGet(k, fallback){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } }
+function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+let memResponses = null, storageOk = true;
+function getResponses(){ return memResponses || lsGet(LS_DATA, []); }
+function saveResponses(arr){ if(lsSet(LS_DATA, arr)){ storageOk = true; } else { memResponses = arr; storageOk = false; } }
+
+function idb(){
+  return new Promise((res, rej) => {
+    try{
+      const r = indexedDB.open('faceExp2', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('images');
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    }catch(e){ rej(e); }
+  });
+}
+async function idbPut(name, blob){ const db = await idb(); return new Promise((res, rej)=>{ const t = db.transaction('images','readwrite'); t.objectStore('images').put(blob, name); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+async function idbAll(){
+  const db = await idb();
+  return new Promise((res, rej)=>{
+    const out = {}; const t = db.transaction('images','readonly');
+    const c = t.objectStore('images').openCursor();
+    c.onsuccess = () => { const cur = c.result; if(cur){ out[cur.key] = cur.value; cur.continue(); } else res(out); };
+    c.onerror = () => rej(c.error);
+  });
+}
+async function idbClear(){ const db = await idb(); return new Promise((res)=>{ const t = db.transaction('images','readwrite'); t.objectStore('images').clear(); t.oncomplete = res; }); }
+
+/* ---------- config ----------
+   cfg.files[path] = { exp, role:'ref'|'pic'|'skip', num, correct, fromName, facesName, facesManual, facesAuto, segs }
+   cfg.exps[key]   = { name, group }
+*/
+function emptyConfig(){ return { files:{}, exps:{}, refSeconds:5, randomizeTrials:true, randomizeOtherBlocks:true }; }
+let cfg = lsGet(LS_CFG, null) || emptyConfig();
+function saveCfg(){ lsSet(LS_CFG, cfg); }
+let images = {}; // path -> objectURL
+
+/* ---------- reading file names ---------- */
+function groupOfWord(w){ w = w.toLowerCase(); for(const [re, g] of GROUP_WORDS) if(re.test(w)) return g; return null; }
+function cap(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+function parsePath(path){
+  const parts = path.split('/');
+  const file = parts[parts.length - 1];
+  const folders = parts.slice(1, -1);
+  const base = file.replace(/\.[^.]+$/, '');
+  const low = base.toLowerCase();
+
+  let correct = null, faces = null, m;
+  m = low.match(/(?:^|[^a-z])(?:correct|answer|ans|pos|c)[\s_\-=]*([1-9])(?![0-9])/); if(m) correct = +m[1];
+  m = low.match(/(?:^|[^0-9])([2-9])[\s_\-]*(?:faces|people|persons|ppl)(?![a-z])/) || low.match(/(?:^|[^a-z])(?:faces|people)[\s_\-=]*([2-9])(?![0-9])/); if(m) faces = +m[1];
+
+  const stripped = low
+    .replace(/(?:^|[^a-z])(?:correct|answer|ans|pos|c)[\s_\-=]*[1-9](?![0-9])/g, ' ')
+    .replace(/[2-9][\s_\-]*(?:faces|people|persons|ppl)(?![a-z])/g, ' ')
+    .replace(/(?:^|[^a-z])(?:faces|people)[\s_\-=]*[2-9](?![0-9])/g, ' ');
+
+  const isRef = /(?:^|[^a-z])(ref|reference|base|alone|original|target|friend|main|solo|single)(?![a-z])/.test(stripped);
+  m = stripped.match(/(?<![0-9])([0-9]{1,2})(?![0-9])/);
+  const num = m ? +m[1] : null;
+
+  let name = '', group = null;
+  for(const src of [...folders.slice().reverse(), base]){
+    const words = src.split(/[^A-Za-z0-9À-ɏ]+/).filter(Boolean)
+      .map(t => { const mm = t.match(/^([A-Za-zÀ-ɏ]+)[0-9]{0,2}$/); return mm ? mm[1] : null; })
+      .filter(Boolean);
+    for(const w of words){
+      const lw = w.toLowerCase();
+      const g = groupOfWord(lw);
+      if(g && !group) group = g;
+      if(!name && !STOP.has(lw) && lw.length >= 2) name = w;
+    }
+  }
+  // key: the friend's name, or the group when the name only says the group ("emirati_3.png")
+  const key = name ? name.toLowerCase() : (group ? 'group:' + group : '');
+  let role = isRef ? 'ref' : (num != null ? 'pic' : 'ref');
+  if(!key) role = 'skip';
+  return { key, name: cap(name), group, role, num: role === 'pic' ? num : null, correct, faces };
+}
+
+function applyParsed(paths){
+  const refSeen = {};
+  paths.forEach(p => {
+    const r = parsePath(p);
+    if(r.key){
+      if(!cfg.exps[r.key]) cfg.exps[r.key] = { name: r.name, group: r.group || '' };
+      else if(!cfg.exps[r.key].group && r.group) cfg.exps[r.key].group = r.group;
+    }
+    const old = cfg.files[p] || {};
+    cfg.files[p] = { exp: r.key, role: r.role, num: r.num, correct: r.correct, fromName: r.correct != null,
+                     facesName: r.faces, facesManual: null, facesAuto: old.facesAuto ?? null, segs: old.segs ?? null };
+    if(r.role === 'ref') (refSeen[r.key] = refSeen[r.key] || []).push(p);
+  });
+  Object.values(refSeen).forEach(list => list.slice(1).forEach(p => { cfg.files[p].role = 'skip'; }));
+  pruneExps();
+}
+function pruneExps(){
+  const used = new Set(Object.entries(cfg.files).filter(([p,f]) => images[p] && f.exp).map(([,f]) => f.exp));
+  Object.keys(cfg.exps).forEach(k => { if(!used.has(k)) delete cfg.exps[k]; });
+}
+
+/* ---------- detecting faces in a picture ----------
+   Faces sit on a white background, so we look for columns that are
+   (almost) all white: those are the gaps between the faces. */
+function detectFaces(url){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      try{
+        const W = 600, H = Math.max(1, Math.round(img.naturalHeight * W / img.naturalWidth));
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        const cx = cv.getContext('2d', { willReadFrequently:true });
+        cx.fillStyle = '#fff'; cx.fillRect(0,0,W,H); cx.drawImage(img, 0, 0, W, H);
+        const d = cx.getImageData(0,0,W,H).data;
+        const frac = new Float32Array(W);
+        for(let x=0; x<W; x++){
+          let c = 0;
+          for(let y=0; y<H; y+=2){ const i = (y*W + x)*4; if(d[i] < 225 || d[i+1] < 225 || d[i+2] < 225) c++; }
+          frac[x] = c / Math.ceil(H/2);
+        }
+        // smooth a little, then keep columns where the face is at least half as tall as the tallest one.
+        // Ovals that touch still separate: where two ovals meet, both are thin.
+        const sm = new Float32Array(W);
+        for(let x=0; x<W; x++){ let s=0,c=0; for(let k=-2;k<=2;k++){ const j=x+k; if(j>=0&&j<W){ s+=frac[j]; c++; } } sm[x]=s/c; }
+        frac.set(sm);
+        const peak = Math.max(...frac);
+        const thr = Math.max(0.03, peak * 0.5);
+        let runs = [], start = -1;
+        for(let x=0; x<=W; x++){
+          const on = x < W && frac[x] > thr;
+          if(on && start < 0) start = x;
+          if(!on && start >= 0){ runs.push([start, x]); start = -1; }
+        }
+        // merge tiny gaps, drop tiny specks
+        const merged = [];
+        runs.forEach(r => { const last = merged[merged.length-1]; if(last && r[0] - last[1] <= 3) last[1] = r[1]; else merged.push(r.slice()); });
+        const widest = Math.max(1, ...merged.map(r => r[1]-r[0]));
+        const faces = merged.filter(r => (r[1]-r[0]) >= Math.max(8, widest * 0.35));
+        if(faces.length < 1 || faces.length > 8) return resolve(null);
+        // hit areas: split the gap between neighbours in the middle
+        const segs = faces.map((r, i) => {
+          const L = i === 0 ? 0 : (faces[i-1][1] + r[0]) / 2;
+          const R = i === faces.length-1 ? W : (r[1] + faces[i+1][0]) / 2;
+          return [+(L/W).toFixed(4), +(R/W).toFixed(4)];
+        });
+        resolve({ count: faces.length, segs });
+      }catch(e){ resolve(null); }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+async function detectMissing(paths){
+  let changed = false;
+  for(const p of paths){
+    const f = cfg.files[p]; if(!f || !images[p] || f.facesAuto != null) continue;
+    const r = await detectFaces(images[p]);
+    f.facesAuto = r ? r.count : 0; f.segs = r ? r.segs : null; changed = true;
+  }
+  if(changed) saveCfg();
+  return changed;
+}
+function facesOf(f){ return f.facesManual || f.facesName || (f.facesAuto > 1 ? f.facesAuto : null) || 4; }
+function facesSource(f){ return f.facesManual ? 'typed' : f.facesName ? 'name' : (f.facesAuto > 1 ? 'auto' : 'default'); }
+
+/* ---------- experiments ---------- */
+function expName(key){ const e = cfg.exps[key]; return e && e.name ? e.name : ''; }
+function expLabel(key){ const e = cfg.exps[key]; if(!e) return ''; return e.name || `(no name) ${groupLabel(e.group)}`; }
+function buildExperiment(key){
+  const e = cfg.exps[key]; if(!e) return null;
+  const fs = Object.entries(cfg.files).filter(([p,f]) => images[p] && f.exp === key);
+  const ref = fs.find(([,f]) => f.role === 'ref');
+  const pics = fs.filter(([,f]) => f.role === 'pic')
+    .sort((a,b) => (a[1].num ?? 999) - (b[1].num ?? 999) || a[0].localeCompare(b[0], undefined, {numeric:true}))
+    .map(([p,f]) => { const n = facesOf(f); return { path:p, num:f.num, correct: (f.correct >= 1 && f.correct <= n) ? f.correct : null, faces:n, segs: (f.segs && f.segs.length === n) ? f.segs : null }; });
+  return { key, name:e.name, group:e.group, ref: ref ? ref[0] : null, pics };
+}
+function checkSetup(){
+  const warnings = []; const runnable = [];
+  Object.keys(cfg.exps).sort().forEach(k => {
+    const ex = buildExperiment(k); const lbl = expLabel(k);
+    if(!ex.ref){ warnings.push(`${lbl}: no reference photo, so this experiment is left out.`); return; }
+    if(!ex.pics.length){ warnings.push(`${lbl}: no pictures, so this experiment is left out.`); return; }
+    if(!ex.group) warnings.push(`${lbl}: no nationality chosen, so it won't be used until you pick one.`);
+    if(!ex.name) warnings.push(`${lbl}: no name. Participants will be asked to find "the man you just saw".`);
+    const noKey = ex.pics.filter(p => p.correct == null).length;
+    if(noKey) warnings.push(`${lbl}: ${noKey} picture${noKey===1?'':'s'} without a correct answer. Answers are recorded but not scored.`);
+    runnable.push(ex);
+  });
+  GROUPS.forEach(g => { if(!runnable.some(ex => ex.group === g.id)) warnings.push(`${g.label}: no experiment yet, so ${g.label} participants skip Phase 1 and nobody gets it in Phase 2.`); });
+  const usable = runnable.filter(ex => ex.group);
+  return { warnings, runnable: usable, ready: usable.length > 0 };
+}
+
+/* ---------- utils ---------- */
+const $ = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function shuffle(a){ a = a.slice(); for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+// IDs must be unique across everyone's devices on the public site, so add a random part
+function nextParticipantId(){ const c = (lsGet(LS_COUNT, 0) || 0) + 1; lsSet(LS_COUNT, c); return 'P' + String(c).padStart(3,'0') + '-' + Math.random().toString(36).slice(2,7).toUpperCase(); }
+const app = document.getElementById('app');
+function render(el){ app.innerHTML = ''; app.appendChild(el); }
+const who = name => name ? esc(name) : 'the man you just saw';
+
+// tooltip for charts
+const tip = document.getElementById('tip');
+document.addEventListener('mousemove', e => {
+  const t = e.target.closest && e.target.closest('[data-tip]');
+  if(!t){ tip.style.display = 'none'; return; }
+  tip.innerHTML = t.getAttribute('data-tip'); tip.style.display = 'block';
+  const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+  const y = e.clientY + 16 + tip.offsetHeight > window.innerHeight ? e.clientY - tip.offsetHeight - 10 : e.clientY + 16;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+});
+
+/* ============================================================
+   PARTICIPANT FLOW
+   ============================================================ */
+let session = null;
+
+function screenStart(){
+  let chosen = null;
+  const st = checkSetup();
+  const el = $(`<div>
+    <div class="card center">
+      <h1>Face Recognition Test</h1>
+      <p class="muted">You will be shown a person's face, then asked to find him among people who look similar.</p>
+      <h2>Which of these best describes your background?</h2>
+      <div class="choices">${GROUPS.map(g => `<button class="choice" data-g="${g.id}">${esc(g.label)}</button>`).join('')}</div>
+      <div>${st.ready ? '' : `<p class="warn">The test isn't set up yet. Click <b>Experimenter</b> (bottom right).</p>`}</div>
+      <button class="primary big" id="go" disabled>Start</button>
+    </div>
+    <button class="corner" id="exp">Experimenter</button>
+  </div>`);
+  el.querySelectorAll('.choice').forEach(b => b.onclick = () => {
+    el.querySelectorAll('.choice').forEach(x => x.classList.remove('sel'));
+    b.classList.add('sel'); chosen = b.dataset.g;
+    el.querySelector('#go').disabled = !st.ready;
+  });
+  el.querySelector('#go').onclick = () => beginSession(chosen, st.runnable);
+  el.querySelector('#exp').onclick = () => screenSetup();
+  render(el); window.scrollTo(0,0);
+}
+
+function beginSession(pgroup, runnable){
+  const byName = (a,b) => (a.name || '').localeCompare(b.name || '');
+  const own = runnable.filter(ex => ex.group === pgroup).sort(byName);
+  // Phase 2: one other nationality. Balanced = the one used least so far by people of this background.
+  const candidates = shuffle(GROUPS.map(g => g.id).filter(i => i !== pgroup && runnable.some(ex => ex.group === i)));
+  let phase2 = candidates[0] || null;
+  if(cfg.randomizeOtherBlocks && candidates.length > 1){
+    const rows = getResponses(); const used = {};
+    candidates.forEach(c => used[c] = new Set(rows.filter(r => r.participant_group === groupLabel(pgroup) && r.stimulus_group === groupLabel(c) && String(r.phase) === '2').map(r => r.participant_id)).size);
+    phase2 = candidates.slice().sort((a,b) => used[a] - used[b])[0];
+  }
+  const other = phase2 ? runnable.filter(ex => ex.group === phase2).sort(byName) : [];
+  const blocksEx = [...own.map(ex => [ex,1]), ...other.map(ex => [ex,2])];
+  session = {
+    pid: nextParticipantId(), pgroup, phase2, started: new Date().toISOString(),
+    order: blocksEx.map(([ex,ph]) => `Phase ${ph}: ${groupLabel(ex.group)}${ex.name ? ' (' + ex.name + ')' : ''}`).join(' > '),
+    blocks: blocksEx.map(([ex,ph]) => {
+      const copy = JSON.parse(JSON.stringify(ex));
+      const idx = copy.pics.map((_,i) => i);
+      return { ex: copy, phase: ph, trialOrder: cfg.randomizeTrials ? shuffle(idx) : idx };
+    }),
+    b: 0, t: 0,
+  };
+  screenBlockIntro();
+}
+
+function preload(paths){ paths.forEach(p => { const i = new Image(); i.src = images[p]; }); }
+function screenBlockIntro(){
+  const blk0 = session.blocks[session.b], ex = blk0.ex;
+  let left = Math.max(0, cfg.refSeconds|0);
+  const el = $(`<div class="card center">
+    <p class="progress">Phase ${blk0.phase} of 2</p>
+    <h1>${ex.name ? 'This is ' + esc(ex.name) : 'Remember this man'}</h1>
+    <p class="muted">Look at his face carefully. Next you'll see ${ex.pics.length} pictures of people who look like him. In each one, click on ${ex.name ? esc(ex.name) : 'him'}.</p>
+    <img class="ref-img" src="${images[ex.ref]}" alt="Reference face">
+    <button class="primary big" id="go" ${left>0?'disabled':''}>${left>0?`Continue (${left})`:'Continue'}</button>
+  </div>`);
+  const btn = el.querySelector('#go');
+  if(left>0){
+    const iv = setInterval(() => { left--; if(left<=0){ clearInterval(iv); btn.disabled=false; btn.textContent='Continue'; } else btn.textContent = `Continue (${left})`; }, 1000);
+  }
+  preload(ex.pics.map(p => p.path));
+  btn.onclick = () => { session.t = 0; screenTrial(); };
+  render(el); window.scrollTo(0,0);
+}
+
+function screenTrial(){
+  const blk = session.blocks[session.b]; const ex = blk.ex;
+  const pic = ex.pics[blk.trialOrder[session.t]];
+  const n = pic.faces;
+  const segs = pic.segs || Array.from({length:n}, (_,i) => [i/n, (i+1)/n]);
+  let t0 = null, answered = false;
+  const el = $(`<div class="card center">
+    <p class="progress">Phase ${blk.phase} of 2 · Picture ${session.t+1} of ${ex.pics.length}</p>
+    <h2>Which one is ${who(ex.name)}?</h2>
+    <div class="stim-wrap"><img id="stim" alt="Faces">${segs.map((s,i)=>`<div class="hit" data-p="${i+1}" title="Person ${i+1}" style="left:${s[0]*100}%;width:${(s[1]-s[0])*100}%"></div>`).join('')}</div>
+    <div class="nums">${Array.from({length:n},(_,i)=>`<button data-p="${i+1}">${i+1}</button>`).join('')}</div>
+    <p class="muted" style="font-size:14px">Click on the face, or on its number (counting from the left).</p>
+  </div>`);
+  const img = el.querySelector('#stim');
+  img.onload = () => { t0 = performance.now(); };
+  img.src = images[pic.path];
+  const pick = (p) => {
+    if(answered) return; answered = true;
+    const rt = t0 ? Math.round(performance.now() - t0) : '';
+    const rows = getResponses();
+    const row = {
+      participant_id: session.pid,
+      session_start: session.started,
+      timestamp: new Date().toISOString(),
+      participant_group: groupLabel(session.pgroup),
+      phase: blk.phase,
+      block_number: session.b + 1,
+      block_order: session.order,
+      stimulus_group: groupLabel(ex.group),
+      own_group: blk.phase === 1 ? 1 : 0,
+      target_name: ex.name || '',
+      trial_number: session.t + 1,
+      picture: pic.num ?? '',
+      picture_file: pic.path,
+      num_faces: n,
+      correct_position: pic.correct ?? '',
+      chosen_position: p,
+      correct: pic.correct == null ? '' : (p === pic.correct ? 1 : 0),
+      rt_ms: rt,
+    };
+    rows.push(row);
+    saveResponses(rows);
+    if(RESULTS_URL){ try{ fetch(RESULTS_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(row), keepalive:true }).catch(()=>{}); }catch(e){} }
+    session.t++;
+    setTimeout(() => {
+      if(session.t < ex.pics.length) screenTrial();
+      else { session.b++; if(session.b < session.blocks.length) screenBlockIntro(); else screenEnd(); }
+    }, 250);
+  };
+  el.querySelectorAll('[data-p]').forEach(d => d.onclick = () => pick(parseInt(d.dataset.p,10)));
+  render(el); window.scrollTo(0,0);
+}
+
+function screenEnd(){
+  const el = $(`<div class="card center">
+    <h1>Thank you!</h1>
+    <p class="muted">You've finished the test. Your answers have been saved.</p>
+    <p style="margin-top:24px"><button id="next">Next participant</button></p>
+  </div>`);
+  el.querySelector('#next').onclick = () => { session = null; screenStart(); };
+  render(el); window.scrollTo(0,0);
+}
+
+/* ============================================================
+   EXPERIMENTER: header with tabs
+   ============================================================ */
+function experimenterHeader(active){
+  const el = $(`<div>
+    <div class="row" style="justify-content:space-between">
+      <h1>Experimenter</h1>
+      <button id="back">Back to start screen</button>
+    </div>
+    <div class="tabs"><button data-t="setup" class="${active==='setup'?'on':''}">Setup</button><button data-t="analytics" class="${active==='analytics'?'on':''}">Analytics &amp; data</button></div>
+  </div>`);
+  el.querySelector('#back').onclick = screenStart;
+  el.querySelector('[data-t=setup]').onclick = () => screenSetup();
+  el.querySelector('[data-t=analytics]').onclick = () => screenAnalytics();
+  return el;
+}
+
+/* ============================================================
+   SETUP
+   ============================================================ */
+function screenSetup(keepScroll){
+  const y = window.scrollY;
+  const paths = Object.keys(images).sort((a,b)=>a.localeCompare(b, undefined, {numeric:true}));
+  const st = checkSetup();
+  const expKeys = Object.keys(cfg.exps).sort((a,b) => expLabel(a).localeCompare(expLabel(b)));
+  const groupOpts = sel => `<option value="">(no group)</option>` + GROUPS.map(g => `<option value="${g.id}" ${g.id===sel?'selected':''}>${esc(g.label)}</option>`).join('');
+  const expOpts = sel => `<option value="">(none: skip)</option>` + expKeys.map(k => `<option value="${esc(k)}" ${k===sel?'selected':''}>${esc(expLabel(k))}</option>`).join('') + `<option value="__new">+ new name…</option>`;
+
+  const root = $(`<div></div>`);
+  root.appendChild(experimenterHeader('setup'));
+  const el = $(`<div>
+    <div class="card">
+      <h2 style="margin-top:0">1. Pictures</h2>
+      <p>The pictures for Muhammed, John and Arjun are built into the site, so participants don't need to load anything. You only need the buttons below if you want to <b>add extra</b> pictures on this computer (those stay in this browser only).</p>
+      <div class="row" style="margin-top:10px">
+        <button id="pickFolder" class="primary">Choose folder…</button>
+        <button id="pickFiles">Choose files…</button>
+        <span class="muted">${paths.length} image${paths.length===1?'':'s'} loaded</span>
+      </div>
+      <input type="file" id="folderIn" webkitdirectory multiple hidden>
+      <input type="file" id="filesIn" multiple accept="image/*" hidden>
+      <details style="margin-top:12px"><summary class="muted">How names are read</summary>
+        <ul class="muted" style="font-size:14px">
+          <li><b>Friend's name</b>: the first real word in the sub-folder or file name, e.g. <code>Muhammed/3.png</code> or <code>Muhammed_3.png</code>.</li>
+          <li><b>Group</b>: a word like emirati / arab / caucasian / indian / south asian in the folder or file name, or pick it in the table.</li>
+          <li><b>Reference photo</b>: a name with ref, reference, alone, base or original, or with no number.</li>
+          <li><b>Picture number</b>: the first 1–2 digit number, e.g. <code>Muhammed_3.png</code> → picture 3.</li>
+          <li><b>Correct position</b> (optional): <code>c2</code>, <code>correct2</code> or <code>ans2</code>, e.g. <code>Muhammed_3_c1.png</code>. Or type it in the table.</li>
+          <li><b>Faces</b>: counted automatically. You can also write <code>4faces</code> in the name, or type it in the table.</li>
+        </ul>
+      </details>
+      <p id="loadMsg"></p>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">2. Experiments found</h2>
+      <p class="muted">Each friend is one experiment. Choose which participant group each belongs to.</p>
+      <div id="exps"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">3. Check every image</h2>
+      <p class="muted">Correct = position of the friend, counting from the left. Faces: <b>auto</b> = counted from the image, <b>name</b> = from the file name, <b>typed</b> = entered here. Correct answers read from the file name are <span class="good">green</span>; missing ones are <span class="warn">red</span> (still shown to participants, just not scored).</p>
+      <div id="files"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">4. Options</h2>
+      <div class="row"><label>Show the friend's face for at least <input type="number" id="refSec" min="0" max="60" value="${cfg.refSeconds}" style="width:70px"> seconds</label></div>
+      <div class="row" style="margin-top:8px"><label><input type="checkbox" id="rndT" ${cfg.randomizeTrials?'checked':''}> Shuffle the pictures within each part</label></div>
+      <div class="row" style="margin-top:8px"><label><input type="checkbox" id="rndB" ${cfg.randomizeOtherBlocks?'checked':''}> Phase 2 nationality: balance it (each background gets the other two nationalities equally often). Untick for random.</label></div>
+      <div id="readyMsg" style="margin-top:12px"></div>
+    </div>
+  </div>`);
+  root.appendChild(el);
+
+  // experiments table
+  const exWrap = el.querySelector('#exps');
+  if(!expKeys.length) exWrap.innerHTML = `<p class="muted">No experiments yet. Load the folder first.</p>`;
+  else {
+    const tbl = $(`<div class="table-scroll"><table>
+      <tr><th>Friend's name (shown to participants)</th><th>Group</th><th>Reference</th><th class="n">Pictures</th><th>Faces per picture</th></tr>
+      ${expKeys.map(k => { const ex = buildExperiment(k); const fc = [...new Set(ex.pics.map(p => p.faces))].sort().join(' / ');
+        return `<tr data-k="${esc(k)}">
+        <td><input type="text" data-f="name" value="${esc(ex.name)}" placeholder="(no name)" style="width:170px"></td>
+        <td><select data-f="group">${groupOpts(ex.group)}</select></td>
+        <td>${ex.ref ? `<img class="thumb" src="${images[ex.ref]}">` : '<span class="warn">missing</span>'}</td>
+        <td class="n">${ex.pics.length || '<span class="warn">0</span>'}</td>
+        <td>${fc || '–'}</td>
+      </tr>`; }).join('')}
+    </table></div>`);
+    tbl.querySelectorAll('tr[data-k]').forEach(tr => {
+      const e = cfg.exps[tr.dataset.k];
+      tr.querySelector('[data-f=name]').onchange = ev => { e.name = ev.target.value.trim(); saveCfg(); screenSetup(true); };
+      tr.querySelector('[data-f=group]').onchange = ev => { e.group = ev.target.value; saveCfg(); screenSetup(true); };
+    });
+    exWrap.appendChild(tbl);
+  }
+
+  // files table
+  const fWrap = el.querySelector('#files');
+  if(!paths.length) fWrap.innerHTML = `<p class="muted">No images loaded.</p>`;
+  else {
+    const sorted = paths.slice().sort((a,b) => {
+      const fa = cfg.files[a] || {}, fb = cfg.files[b] || {};
+      const ea = fa.exp ? expLabel(fa.exp) : '~', eb = fb.exp ? expLabel(fb.exp) : '~';
+      if(ea !== eb) return ea.localeCompare(eb);
+      const ra = fa.role==='ref'?0:fa.role==='pic'?1:2, rb = fb.role==='ref'?0:fb.role==='pic'?1:2;
+      if(ra !== rb) return ra - rb;
+      return (fa.num ?? 999) - (fb.num ?? 999) || a.localeCompare(b, undefined, {numeric:true});
+    });
+    const tbl = $(`<div class="table-scroll"><table>
+      <tr><th>Preview</th><th>File</th><th>Experiment</th><th>Type</th><th>Picture #</th><th>Faces</th><th>Correct</th></tr>
+      ${sorted.map((p,i) => { const f = cfg.files[p] || {exp:'',role:'skip'};
+        const skip = f.role==='skip' || !f.exp; const n = facesOf(f);
+        const corrOk = f.correct >= 1 && f.correct <= n;
+        return `<tr data-i="${i}" class="${skip?'skip':''}">
+        <td><img class="thumb" src="${images[p]}"></td>
+        <td class="path">${esc(p)}</td>
+        <td><select data-f="exp">${expOpts(f.exp)}</select></td>
+        <td><select data-f="role"><option value="ref" ${f.role==='ref'?'selected':''}>Reference (alone)</option><option value="pic" ${f.role==='pic'?'selected':''}>Picture</option><option value="skip" ${f.role==='skip'?'selected':''}>Don't use</option></select></td>
+        <td>${f.role==='pic' ? `<input type="number" data-f="num" class="num" min="1" max="99" value="${f.num ?? ''}">` : ''}</td>
+        <td>${f.role==='pic' ? `<input type="number" data-f="faces" class="num" min="2" max="8" value="${n}"> <span class="muted" style="font-size:12px">${facesSource(f)}</span>` : ''}</td>
+        <td>${f.role==='pic' ? `<input type="number" data-f="correct" class="num" min="1" max="${n}" value="${f.correct ?? ''}" style="${corrOk ? (f.fromName?'color:var(--ok);border-color:var(--ok)':'') : 'border-color:var(--bad)'}">` : ''}</td>
+      </tr>`; }).join('')}
+    </table></div>`);
+    tbl.querySelectorAll('tr[data-i]').forEach(tr => {
+      const p = sorted[+tr.dataset.i];
+      const f = cfg.files[p] || (cfg.files[p] = {exp:'',role:'skip',num:null,correct:null});
+      tr.querySelector('[data-f=exp]').onchange = ev => {
+        let v = ev.target.value;
+        if(v === '__new'){
+          const nm = (prompt('Friend\'s name for this experiment:') || '').trim();
+          if(!nm){ screenSetup(true); return; }
+          v = nm.toLowerCase();
+          if(!cfg.exps[v]) cfg.exps[v] = { name: cap(nm), group: groupOfWord(v) || '' };
+        }
+        f.exp = v; if(v && f.role==='skip') f.role = 'pic';
+        pruneExps(); saveCfg(); screenSetup(true);
+      };
+      tr.querySelector('[data-f=role]').onchange = ev => { f.role = ev.target.value; saveCfg(); screenSetup(true); };
+      const ni = tr.querySelector('[data-f=num]'); if(ni) ni.onchange = ev => { const v = parseInt(ev.target.value,10); f.num = isNaN(v) ? null : v; saveCfg(); screenSetup(true); };
+      const fi = tr.querySelector('[data-f=faces]'); if(fi) fi.onchange = ev => { const v = parseInt(ev.target.value,10); f.facesManual = (v>=2 && v<=8) ? v : null; saveCfg(); screenSetup(true); };
+      const ci = tr.querySelector('[data-f=correct]'); if(ci) ci.onchange = ev => { const v = parseInt(ev.target.value,10); f.correct = isNaN(v) ? null : v; f.fromName = false; saveCfg(); screenSetup(true); };
+    });
+    fWrap.appendChild(tbl);
+  }
+
+  // status
+  el.querySelector('#readyMsg').innerHTML =
+    (st.ready ? `<p class="good"><b>Ready to run.</b> ${st.runnable.map(ex => `${esc(groupLabel(ex.group))} → ${esc(ex.name || '(no name)')} (${ex.pics.length})`).join(' · ')}</p>`
+              : `<p class="warn"><b>Not ready yet:</b> load at least one friend with a reference photo and pictures.</p>`) +
+    (st.warnings.length ? `<p class="muted" style="margin-top:8px">Notes (the test still runs):</p><ul class="issues muted">${st.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul>` : '');
+
+  // options
+  el.querySelector('#refSec').onchange = e => { cfg.refSeconds = Math.max(0, parseInt(e.target.value,10)||0); saveCfg(); };
+  el.querySelector('#rndT').onchange = e => { cfg.randomizeTrials = e.target.checked; saveCfg(); };
+  el.querySelector('#rndB').onchange = e => { cfg.randomizeOtherBlocks = e.target.checked; saveCfg(); };
+
+  // loading
+  const folderIn = el.querySelector('#folderIn'), filesIn = el.querySelector('#filesIn');
+  el.querySelector('#pickFolder').onclick = () => folderIn.click();
+  el.querySelector('#pickFiles').onclick = () => filesIn.click();
+  const onFiles = async (fileList) => {
+    const files = Array.from(fileList).filter(f => /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(f.name) && !f.name.startsWith('.'));
+    const newPaths = []; let stored = true;
+    const msg0 = document.getElementById('loadMsg'); if(msg0) msg0.textContent = 'Reading images…';
+    for(const f of files){
+      const p = f.webkitRelativePath || f.name;
+      if(images[p] && String(images[p]).startsWith('blob:')) URL.revokeObjectURL(images[p]);
+      images[p] = URL.createObjectURL(f);
+      newPaths.push(p);
+      try{ await idbPut(p, f); }catch(e){ stored = false; }
+    }
+    newPaths.forEach(p => { if(cfg.files[p]){ cfg.files[p].facesAuto = null; cfg.files[p].segs = null; } });
+    applyParsed(newPaths);
+    await detectMissing(newPaths);
+    saveCfg();
+    screenSetup();
+    const recognised = newPaths.filter(p => cfg.files[p].exp).length;
+    const msg = document.getElementById('loadMsg');
+    if(msg) msg.innerHTML = `Loaded ${newPaths.length} image${newPaths.length===1?'':'s'}. ${recognised} matched to an experiment from the names` +
+      (recognised < newPaths.length ? `; <span class="warn">${newPaths.length - recognised} couldn't be matched, so set them in the table below if you need them.</span>` : '.') +
+      (stored ? '' : ` <span class="warn">This browser couldn't keep the images, so you'll need to load them again after a reload.</span>`);
+  };
+  folderIn.onchange = () => onFiles(folderIn.files);
+  filesIn.onchange = () => onFiles(filesIn.files);
+
+  render(root);
+  window.scrollTo(0, keepScroll ? y : 0);
+}
+
+/* ============================================================
+   ANALYTICS
+   ============================================================ */
+const mean = a => a.length ? a.reduce((s,x)=>s+x,0)/a.length : NaN;
+const median = a => { if(!a.length) return NaN; const s = a.slice().sort((x,y)=>x-y); const m = Math.floor(s.length/2); return s.length%2 ? s[m] : (s[m-1]+s[m])/2; };
+const sd = a => { if(a.length < 2) return NaN; const m = mean(a); return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1)); };
+const pctTxt = v => isNaN(v) ? '–' : Math.round(v*100) + '%';
+const msTxt = v => isNaN(v) ? '–' : (v >= 10000 ? (v/1000).toFixed(1) + ' s' : Math.round(v) + ' ms');
+
+// Student t distribution (two-tailed p) via the regularised incomplete beta function
+function gammln(x){ const c=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5]; let y=x, t=x+5.5; t-=(x+0.5)*Math.log(t); let s=1.000000000190015; for(const k of c) s+=k/++y; return -t+Math.log(2.5066282746310005*s/x); }
+function betacf(a,b,x){ const FP=1e-300; let qab=a+b,qap=a+1,qam=a-1,c=1,d=1-qab*x/qap; if(Math.abs(d)<FP)d=FP; d=1/d; let h=d;
+  for(let m=1;m<=300;m++){ const m2=2*m; let aa=m*(b-m)*x/((qam+m2)*(a+m2)); d=1+aa*d; if(Math.abs(d)<FP)d=FP; c=1+aa/c; if(Math.abs(c)<FP)c=FP; d=1/d; h*=d*c;
+    aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2)); d=1+aa*d; if(Math.abs(d)<FP)d=FP; c=1+aa/c; if(Math.abs(c)<FP)c=FP; d=1/d; const del=d*c; h*=del; if(Math.abs(del-1)<3e-12) break; } return h; }
+function betai(a,b,x){ if(x<=0) return 0; if(x>=1) return 1; const bt=Math.exp(gammln(a+b)-gammln(a)-gammln(b)+a*Math.log(x)+b*Math.log(1-x)); return x<(a+1)/(a+b+2) ? bt*betacf(a,b,x)/a : 1-bt*betacf(b,a,1-x)/b; }
+function tTestP(t, df){ return betai(df/2, 0.5, df/(df + t*t)); }
+
+// grouped bar chart (one y-axis, thin bars, 2px gaps, rounded data-ends)
+function barChart({ cats, series, max, fmt, tickFmt, ticks, chance, height=260 }){
+  const W = 560, H = height, L = 50, R = 70, T = 22, B = 34;
+  const iw = W - L - R, ih = H - T - B;
+  const gw = iw / cats.length, barW = Math.min(46, (gw * 0.62 - 2*(series.length-1)) / series.length);
+  const groupW = barW*series.length + 2*(series.length-1);
+  const y = v => T + ih - (v / max) * ih;
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">`;
+  ticks.forEach(tv => { s += `<line class="grid" x1="${L}" x2="${W-R}" y1="${y(tv)}" y2="${y(tv)}"/><text x="${L-8}" y="${y(tv)+4}" text-anchor="end">${tickFmt(tv)}</text>`; });
+  s += `<line class="axis" x1="${L}" x2="${W-R}" y1="${T+ih}" y2="${T+ih}"/>`;
+  cats.forEach((c, ci) => {
+    const gx = L + gw*ci + (gw - groupW)/2;
+    series.forEach((se, si) => {
+      const d = se.values[ci]; if(!d || isNaN(d.v)) return;
+      const x = gx + si*(barW+2), yy = y(d.v), h = Math.max(0, T + ih - yy), r = Math.min(4, h, barW/2);
+      const path = h <= 0 ? '' : `M${x},${T+ih} V${yy+r} Q${x},${yy} ${x+r},${yy} H${x+barW-r} Q${x+barW},${yy} ${x+barW},${yy+r} V${T+ih} Z`;
+      const tipTxt = `<b>${esc(c)}</b><br>${esc(se.name)}: ${fmt(d.v)}${d.extra ? '<br>' + d.extra : ''}`;
+      s += `<g data-tip="${esc(tipTxt)}"><rect x="${x-3}" y="${T}" width="${barW+6}" height="${ih}" fill="transparent"/>${path ? `<path d="${path}" fill="${se.color}"/>` : ''}<text class="val" x="${x+barW/2}" y="${yy-6}" text-anchor="middle">${fmt(d.v)}</text></g>`;
+    });
+    s += `<text x="${L + gw*ci + gw/2}" y="${H-12}" text-anchor="middle">${esc(c)}</text>`;
+  });
+  if(chance != null && !isNaN(chance)){
+    s += `<line class="chance" x1="${L}" x2="${W-R}" y1="${y(chance)}" y2="${y(chance)}"/><text x="${W-R+6}" y="${y(chance)-2}" text-anchor="start">chance<tspan x="${W-R+6}" dy="14">${Math.round(chance*100)}%</tspan></text>`;
+  }
+  return s + `</svg>`;
+}
+
+const HEAT = ['#cde2fb','#b7d3f6','#9ec5f4','#86b6ef','#6da7ec','#5598e7','#3987e5','#2a78d6','#256abf','#1c5cab','#184f95','#104281','#0d366b'];
+function heatColor(v){ const i = Math.max(0, Math.min(HEAT.length-1, Math.round(v*(HEAT.length-1)))); return { bg: HEAT[i], ink: i >= 6 ? '#ffffff' : '#0b0b0b' }; }
+
+function screenAnalytics(){
+  const all = getResponses();
+  const scored = all.filter(r => r.correct === 0 || r.correct === 1);
+  const pids = [...new Set(all.map(r => r.participant_id))];
+  const labels = GROUPS.map(g => g.label);
+  const acc = rs => rs.length ? rs.reduce((s,r)=>s+r.correct,0)/rs.length : NaN;
+  const rts = rs => rs.map(r => +r.rt_ms).filter(v => v > 0);
+  const chance = mean(scored.map(r => 1/(+r.num_faces || 4)));
+
+  const root = $(`<div></div>`);
+  root.appendChild(experimenterHeader('analytics'));
+
+  // per participant own/other
+  const perP = pids.map(pid => {
+    const rs = scored.filter(r => r.participant_id === pid);
+    const any = all.find(r => r.participant_id === pid);
+    const own = rs.filter(r => r.own_group === 1), oth = rs.filter(r => r.own_group === 0);
+    const p2 = all.find(r => r.participant_id === pid && r.own_group === 0);
+    return { pid, group: any.participant_group, p2: p2 ? p2.stimulus_group : '–', date: (any.session_start || '').slice(0,16).replace('T',' '),
+      n: all.filter(r => r.participant_id === pid).length, own: acc(own), other: acc(oth), all: acc(rs),
+      rtOwn: median(rts(own.filter(r => r.correct===1))), rtOther: median(rts(oth.filter(r => r.correct===1))) };
+  });
+  const diffs = perP.filter(p => !isNaN(p.own) && !isNaN(p.other)).map(p => p.own - p.other);
+
+  // stat tiles
+  const ownAll = scored.filter(r => r.own_group === 1), othAll = scored.filter(r => r.own_group === 0);
+  let testTxt = 'Needs at least 2 participants with both own- and other-group answers.';
+  if(diffs.length >= 2){
+    const md = mean(diffs), s = sd(diffs), n = diffs.length;
+    if(s > 0){
+      const t = md / (s/Math.sqrt(n)), p = tTestP(t, n-1);
+      testTxt = `Paired t-test, Phase 1 (own nationality) vs Phase 2 (other nationality) accuracy per participant: mean difference ${md>=0?'+':''}${(md*100).toFixed(1)} percentage points, t(${n-1}) = ${t.toFixed(2)}, p ${p < .001 ? '< .001' : '= ' + p.toFixed(3)}, Cohen's d = ${(md/s).toFixed(2)}. ${p < .05 ? (md > 0 ? 'People were significantly better in Phase 1 (their own nationality).' : 'People were significantly better in Phase 2 (the other nationality).') : 'The difference is not statistically significant (p ≥ .05).'}`;
+    } else testTxt = `Every participant had the same own vs other difference (${(md*100).toFixed(1)} points), so a t-test can't be computed.`;
+  }
+
+  const el = $(`<div>
+    <div class="tiles" style="margin-top:16px">
+      <div class="tile"><div class="l">Participants</div><div class="v">${pids.length}</div><div class="s">${all.length} answers saved</div></div>
+      <div class="tile"><div class="l">Overall accuracy</div><div class="v">${pctTxt(acc(scored))}</div><div class="s">${scored.length} scored answers · chance ${pctTxt(chance)}</div></div>
+      <div class="tile"><div class="l">Phase 1 · own nationality</div><div class="v">${pctTxt(acc(ownAll))}</div><div class="s">${ownAll.length} answers</div></div>
+      <div class="tile"><div class="l">Phase 2 · other nationality</div><div class="v">${pctTxt(acc(othAll))}</div><div class="s">${othAll.length} answers</div></div>
+      <div class="tile"><div class="l">Phase 1 − Phase 2</div><div class="v">${diffs.length ? ((mean(diffs)>=0?'+':'') + Math.round(mean(diffs)*100) + ' pts') : '–'}</div><div class="s">mean per participant (n=${diffs.length})</div></div>
+    </div>
+    <div class="stat">${esc(testTxt)}</div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3 style="margin-top:0">Accuracy: Phase 1 vs Phase 2</h3>
+        <p class="muted" style="font-size:13px">By participant background. Dashed line = guessing.</p>
+        <div class="legend"><span><i style="background:var(--s1)"></i>Phase 1 · own nationality</span><span><i style="background:var(--s2)"></i>Phase 2 · other nationality</span></div>
+        <div id="chartAcc"></div>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Response time on correct answers</h3>
+        <p class="muted" style="font-size:13px">Median, by participant background.</p>
+        <div class="legend"><span><i style="background:var(--s1)"></i>Phase 1 · own nationality</span><span><i style="background:var(--s2)"></i>Phase 2 · other nationality</span></div>
+        <div id="chartRt"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Accuracy by participant background × face group</h3>
+      <p class="muted" style="font-size:13px">Darker = more accurate. Diagonal (outlined) = Phase 1, own nationality; the rest = Phase 2. Number of answers in brackets.</p>
+      <div class="table-scroll" id="heat"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Pictures</h3>
+      <p class="muted" style="font-size:13px">How often each picture was answered correctly, and which wrong face was picked most. Very easy or very hard pictures show up here.</p>
+      <div class="table-scroll" id="items"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Participants</h3>
+      <div class="table-scroll" id="parts"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Data</h3>
+      <p class="muted">Every answer is saved in this browser's local storage the moment it's given, so closing the page doesn't lose anything. It only lives on this computer, in this browser, so download a copy after each session.</p>
+      ${storageOk ? '' : `<p class="warn">Local storage isn't available right now, so results are only kept until the page is closed. Download them before closing.</p>`}
+      <div class="row" style="margin-top:10px">
+        <button id="csv" class="primary">Download results (CSV)</button>
+        <button id="json">Download backup (JSON)</button>
+        <button id="restore">Restore / merge backup…</button>
+        <button id="clearData">Delete all results</button>
+        <button id="clearImgs">Remove extra loaded images</button>
+      </div>
+      <input type="file" id="restoreIn" accept=".json,application/json" hidden>
+      <p id="dataMsg"></p>
+    </div>
+  </div>`);
+  root.appendChild(el);
+
+  if(!all.length){
+    ['chartAcc','chartRt','heat','items','parts'].forEach(id => el.querySelector('#'+id).innerHTML = `<p class="muted">No results yet.</p>`);
+  } else {
+    // accuracy chart
+    const accVals = (flag) => labels.map(pl => { const rs = scored.filter(r => r.participant_group === pl && r.own_group === flag); return { v: acc(rs), extra: `${rs.length} answers, ${new Set(rs.map(r=>r.participant_id)).size} participants` }; });
+    el.querySelector('#chartAcc').innerHTML = barChart({ cats: labels, max: 1, ticks:[0,.25,.5,.75,1], tickFmt: v => Math.round(v*100)+'%', fmt: pctTxt, chance,
+      series:[ { name:'Phase 1 (own)', color:'var(--s1)', values: accVals(1) }, { name:'Phase 2 (other)', color:'var(--s2)', values: accVals(0) } ] });
+    // RT chart
+    const rtVals = (flag) => labels.map(pl => { const v = rts(scored.filter(r => r.participant_group === pl && r.own_group === flag && r.correct === 1)); return { v: median(v), extra: `${v.length} correct answers` }; });
+    const rA = rtVals(1), rB = rtVals(0);
+    const rMaxRaw = Math.max(1, ...[...rA, ...rB].map(d => d.v).filter(v => !isNaN(v)));
+    const stepMs = rMaxRaw > 8000 ? 2000 : rMaxRaw > 4000 ? 1000 : rMaxRaw > 2000 ? 500 : 250;
+    const rMax = Math.ceil(rMaxRaw * 1.12 / stepMs) * stepMs;
+    const rTicks = []; for(let v=0; v<=rMax; v+=stepMs) rTicks.push(v);
+    el.querySelector('#chartRt').innerHTML = barChart({ cats: labels, max: rMax, ticks: rTicks, tickFmt: v => (v/1000).toFixed(stepMs < 1000 ? 2 : 0).replace(/\.?0+$/,'') + 's', fmt: v => isNaN(v) ? '–' : (v/1000).toFixed(v < 1000 ? 2 : 1) + 's',
+      series:[ { name:'Phase 1 (own)', color:'var(--s1)', values: rA }, { name:'Phase 2 (other)', color:'var(--s2)', values: rB } ] });
+
+    // heatmap table
+    const stimLabels = [...labels, ...(scored.some(r => r.stimulus_group === 'Unassigned') ? ['Unassigned'] : [])];
+    el.querySelector('#heat').innerHTML = `<table class="heat">
+      <tr><th>Participant ↓ / Faces →</th>${stimLabels.map(l => `<th>${esc(l)}</th>`).join('')}<th>All</th></tr>
+      ${labels.map(pl => `<tr><th>${esc(pl)}</th>${[...stimLabels, '*'].map(sl => {
+        const rs = scored.filter(r => r.participant_group === pl && (sl === '*' || r.stimulus_group === sl));
+        if(!rs.length) return `<td class="muted">–</td>`;
+        const a = acc(rs), c = heatColor(a), own = sl === pl;
+        return `<td data-tip="${esc(`<b>${esc(pl)} participants, ${sl==='*'?'all':esc(sl)} faces</b><br>${pctTxt(a)} correct (${rs.filter(r=>r.correct===1).length} of ${rs.length})`)}" style="background:${c.bg};color:${c.ink};${own?'outline:2px solid var(--ink);outline-offset:-3px;':''}">${pctTxt(a)} <span style="opacity:.75">(${rs.length})</span></td>`;
+      }).join('')}</tr>`).join('')}
+    </table>`;
+
+    // item analysis
+    const items = {};
+    all.forEach(r => { const k = r.picture_file; (items[k] = items[k] || { file:k, group:r.stimulus_group, name:r.target_name, pic:r.picture, faces:r.num_faces, key:r.correct_position, rows:[] }).rows.push(r); });
+    const itemRows = Object.values(items).sort((a,b) => (a.group+a.name).localeCompare(b.group+b.name) || (+a.pic||0) - (+b.pic||0));
+    el.querySelector('#items').innerHTML = `<table>
+      <tr><th>Face group</th><th>Friend</th><th class="n">Picture</th><th class="n">Faces</th><th class="n">Correct pos.</th><th class="n">Answers</th><th class="n">Accuracy</th><th class="n">Phase 1</th><th class="n">Phase 2</th><th>Most picked wrong</th><th class="n">Median time</th></tr>
+      ${itemRows.map(it => {
+        const sc = it.rows.filter(r => r.correct === 0 || r.correct === 1);
+        const wrong = {}; sc.filter(r => r.correct === 0).forEach(r => wrong[r.chosen_position] = (wrong[r.chosen_position]||0) + 1);
+        const w = Object.entries(wrong).sort((a,b) => b[1]-a[1])[0];
+        return `<tr><td>${esc(it.group)}</td><td>${esc(it.name || '–')}</td><td class="n">${esc(it.pic)}</td><td class="n">${esc(it.faces)}</td><td class="n">${it.key === '' ? '<span class="warn">none</span>' : esc(it.key)}</td>
+          <td class="n">${it.rows.length}</td><td class="n"><b>${pctTxt(acc(sc))}</b></td><td class="n">${pctTxt(acc(sc.filter(r=>r.own_group===1)))}</td><td class="n">${pctTxt(acc(sc.filter(r=>r.own_group===0)))}</td>
+          <td>${w ? `face ${esc(w[0])} (${w[1]}×)` : '–'}</td><td class="n">${msTxt(median(rts(it.rows)))}</td></tr>`;
+      }).join('')}
+    </table>`;
+
+    // participants
+    el.querySelector('#parts').innerHTML = `<table>
+      <tr><th>ID</th><th>Background</th><th>Started</th><th class="n">Answers</th><th class="n">Overall</th><th>Phase 2 nationality</th><th class="n">Phase 1</th><th class="n">Phase 2</th><th class="n">Difference</th><th class="n">Median time P1</th><th class="n">Median time P2</th></tr>
+      ${perP.map(p => `<tr><td>${esc(p.pid)}</td><td>${esc(p.group)}</td><td>${esc(p.date)}</td><td class="n">${p.n}</td><td class="n">${pctTxt(p.all)}</td><td>${esc(p.p2)}</td><td class="n">${pctTxt(p.own)}</td><td class="n">${pctTxt(p.other)}</td>
+        <td class="n">${isNaN(p.own)||isNaN(p.other) ? '–' : ((p.own-p.other)>=0?'+':'') + Math.round((p.own-p.other)*100) + ' pts'}</td><td class="n">${msTxt(p.rtOwn)}</td><td class="n">${msTxt(p.rtOther)}</td></tr>`).join('')}
+    </table>`;
+  }
+
+  // data buttons
+  const download = (content, type, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content], {type})); a.download = name; document.body.appendChild(a); a.click(); a.remove(); };
+  const stamp = () => new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+  el.querySelector('#csv').onclick = () => {
+    const rows = getResponses(); if(!rows.length){ alert('No results to download yet.'); return; }
+    const cols = ['participant_id','session_start','timestamp','participant_group','phase','block_number','block_order','stimulus_group','own_group','target_name','trial_number','picture','picture_file','num_faces','correct_position','chosen_position','correct','rt_ms'];
+    const q = v => { v = String(v ?? ''); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; };
+    download([cols.join(','), ...rows.map(r => cols.map(c => q(r[c])).join(','))].join('\n'), 'text/csv', `face_test_results_${stamp()}.csv`);
+  };
+  el.querySelector('#json').onclick = () => download(JSON.stringify({ exported: new Date().toISOString(), counter: lsGet(LS_COUNT, 0), responses: getResponses() }, null, 1), 'application/json', `face_test_backup_${stamp()}.json`);
+  const restoreIn = el.querySelector('#restoreIn');
+  el.querySelector('#restore').onclick = () => restoreIn.click();
+  restoreIn.onchange = async () => {
+    try{
+      const data = JSON.parse(await restoreIn.files[0].text());
+      const incoming = Array.isArray(data) ? data : data.responses;
+      if(!Array.isArray(incoming)) throw new Error('bad file');
+      const cur = getResponses();
+      const seen = new Set(cur.map(r => r.participant_id + '|' + r.timestamp + '|' + r.picture_file));
+      const add = incoming.filter(r => !seen.has(r.participant_id + '|' + r.timestamp + '|' + r.picture_file));
+      saveResponses(cur.concat(add));
+      const maxId = Math.max(lsGet(LS_COUNT, 0) || 0, data.counter || 0, ...cur.concat(add).map(r => parseInt(String(r.participant_id).replace(/\D/g,''),10) || 0));
+      lsSet(LS_COUNT, maxId);
+      screenAnalytics();
+      document.getElementById('dataMsg').innerHTML = `<span class="good">Added ${add.length} answers from the backup (${incoming.length - add.length} were already here).</span>`;
+    }catch(e){ document.getElementById('dataMsg').innerHTML = `<span class="warn">That file couldn't be read as a backup.</span>`; }
+  };
+  el.querySelector('#clearData').onclick = () => {
+    if(!confirm('Delete ALL recorded results from this browser? Download the CSV or backup first if you need it.')) return;
+    saveResponses([]); lsSet(LS_COUNT, 0); screenAnalytics();
+  };
+  el.querySelector('#clearImgs').onclick = async () => {
+    if(!confirm('Remove all loaded images and the image setup from this browser? Results are kept.')) return;
+    Object.values(images).forEach(u => { if(String(u).startsWith('blob:')) URL.revokeObjectURL(u); }); images = {};
+    try{ await idbClear(); }catch(e){}
+    const keep = { refSeconds: cfg.refSeconds, randomizeTrials: cfg.randomizeTrials, randomizeOtherBlocks: cfg.randomizeOtherBlocks };
+    cfg = Object.assign(emptyConfig(), keep); loadBuiltins(); saveCfg();
+    screenAnalytics();
+  };
+  render(root); window.scrollTo(0,0);
+}
+
+/* ---------- built-in pictures ---------- */
+function loadBuiltins(){
+  Object.entries(BUILTIN_FRIENDS).forEach(([k, fr]) => {
+    const old = cfg.exps[k] || {};
+    cfg.exps[k] = { name: old.name || fr.name, group: old.group || fr.group };
+    images[fr.ref] = fr.ref;
+    const o = cfg.files[fr.ref];
+    if(!o || o.builtin) cfg.files[fr.ref] = { exp:k, role:'ref', num:null, correct:null, fromName:false, facesName:null, facesManual:null, facesAuto:1, segs:null, builtin:true };
+  });
+  BUILTIN_PICTURES.forEach(b => {
+    images[b.file] = b.file;
+    const o = cfg.files[b.file];
+    const typed = o && o.builtin && o.fromName === false && o.correct != null; // answer typed in Setup on this computer wins
+    if(o && !o.builtin) return;
+    cfg.files[b.file] = { exp:b.friend, role:(o && o.role === 'skip') ? 'skip' : 'pic', num:b.picture,
+      correct: typed ? o.correct : b.correct, fromName: !typed, facesName:b.faces, facesManual: o ? o.facesManual : null,
+      facesAuto:b.faces, segs:b.segs, builtin:true };
+  });
+  saveCfg();
+}
+
+/* ---------- boot ---------- */
+(async function boot(){
+  try{
+    const stored = await idbAll();
+    Object.entries(stored).forEach(([n, blob]) => { images[n] = URL.createObjectURL(blob); });
+  }catch(e){}
+  loadBuiltins();
+  const unparsed = Object.keys(images).filter(p => !cfg.files[p]);
+  if(unparsed.length){ applyParsed(unparsed); saveCfg(); }
+  screenStart();
+  if(await detectMissing(Object.keys(images))) { /* counts refreshed in the background */ }
+})();
+</script>
+</body>
+</html>
